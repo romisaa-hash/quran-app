@@ -49,7 +49,8 @@ class LocationService {
       String city = 'موقعي الحالي';
       String? iso;
       try {
-        final marks = await placemarkFromCoordinates(pos.latitude, pos.longitude);
+        final List<Placemark> marks =
+            await Geocoding().placemarkFromCoordinates(pos.latitude, pos.longitude);
         if (marks.isNotEmpty) {
           final m = marks.first;
           final parts = [m.locality, m.administrativeArea, m.country]

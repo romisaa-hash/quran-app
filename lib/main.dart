@@ -47,7 +47,7 @@ class RafiqApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       theme: base.copyWith(
-        textTheme: GoogleFonts.tajawalTextTheme(base.textTheme),
+        textTheme: base.textTheme.apply(fontFamily: GoogleFonts.tajawal().fontFamily),
         appBarTheme: AppBarTheme(
           backgroundColor: kGreen,
           foregroundColor: Colors.white,

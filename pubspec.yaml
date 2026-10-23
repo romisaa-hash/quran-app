@@ -14,7 +14,7 @@ dependencies:
   flutter_local_notifications: ^22.0.0
   timezone: any
   geolocator: any
-  geocoding: any
+  geocoding: ^5.0.0
   just_audio: any
   cached_network_image: any
   flutter_cache_manager: any
