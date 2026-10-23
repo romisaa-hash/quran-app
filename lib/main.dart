@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -41,6 +42,18 @@ class RafiqApp extends StatelessWidget {
       title: 'رفيق المسلم',
       debugShowCheckedModeBanner: false,
       scrollBehavior: const _AppScrollBehavior(),
+      // على اللابتوب: نعرض التطبيق بمقاس موبايل في النص
+      builder: (context, child) => kIsWeb
+          ? ColoredBox(
+              color: const Color(0xFFE6DFCF),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: ClipRect(child: child),
+                ),
+              ),
+            )
+          : child!,
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],
       localizationsDelegates: const [

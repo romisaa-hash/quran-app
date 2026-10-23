@@ -260,7 +260,6 @@ class MushafReader extends StatefulWidget {
 class _MushafReaderState extends State<MushafReader> {
   late final PageController _ctrl;
   late int _page;
-  bool _showBars = true;
   bool _zoomed = false;
   final FocusNode _focus = FocusNode();
   final st = AppState.instance;
@@ -381,10 +380,59 @@ class _MushafReaderState extends State<MushafReader> {
           if (e.logicalKey == LogicalKeyboardKey.arrowLeft) _next();
           if (e.logicalKey == LogicalKeyboardKey.arrowRight) _prev();
         },
-        child: Stack(
+        child: Column(
         children: [
-          GestureDetector(
-            onTap: () => setState(() => _showBars = !_showBars),
+          // الشريط العلوي
+          Material(
+            color: kGreen,
+            elevation: 4,
+            child: SafeArea(
+              bottom: false,
+              child: SizedBox(
+                height: 56,
+                child: Row(
+                  children: [
+                    const BackButton(color: Colors.white),
+                    Expanded(
+                      child: InkWell(
+                        onTap: _pickSurah,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('سورة ${surahNames[surah - 1]}',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold)),
+                            Text('الجزء ${juzNames[juz - 1]}',
+                                style:
+                                    const TextStyle(color: kGold, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                          bookmarked ? Icons.bookmark : Icons.bookmark_border,
+                          color: kGold),
+                      tooltip: 'علامة',
+                      onPressed: () async {
+                        await st.toggleBookmark(_page);
+                        if (!context.mounted) return;
+                        setState(() {});
+                        showSnack(
+                            context,
+                            st.bookmarks.contains(_page)
+                                ? 'تم حفظ العلامة على صفحة ${ar(_page)}'
+                                : 'تم حذف العلامة');
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Expanded(
             child: PageView.builder(
               controller: _ctrl,
               itemCount: totalPages,
@@ -407,69 +455,8 @@ class _MushafReaderState extends State<MushafReader> {
               ),
             ),
           ),
-          // الشريط العلوي
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 200),
-            top: _showBars ? 0 : -120,
-            left: 0,
-            right: 0,
-            child: Material(
-              color: kGreen,
-              elevation: 4,
-              child: SafeArea(
-                bottom: false,
-                child: SizedBox(
-                  height: 56,
-                  child: Row(
-                    children: [
-                      const BackButton(color: Colors.white),
-                      Expanded(
-                        child: InkWell(
-                          onTap: _pickSurah,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text('سورة ${surahNames[surah - 1]}',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold)),
-                              Text('الجزء ${juzNames[juz - 1]}',
-                                  style: const TextStyle(
-                                      color: kGold, fontSize: 12)),
-                            ],
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                            bookmarked ? Icons.bookmark : Icons.bookmark_border,
-                            color: kGold),
-                        tooltip: 'علامة',
-                        onPressed: () async {
-                          await st.toggleBookmark(_page);
-                          if (!context.mounted) return;
-                          setState(() {});
-                          showSnack(
-                              context,
-                              st.bookmarks.contains(_page)
-                                  ? 'تم حفظ العلامة على صفحة ${ar(_page)}'
-                                  : 'تم حذف العلامة');
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
           // الشريط السفلي
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 200),
-            bottom: _showBars ? 0 : -120,
-            left: 0,
-            right: 0,
-            child: Material(
+          Material(
               color: kGreen,
               elevation: 4,
               child: SafeArea(
@@ -527,7 +514,6 @@ class _MushafReaderState extends State<MushafReader> {
                 ),
               ),
             ),
-          ),
         ],
       ),
       ),
@@ -560,60 +546,72 @@ class _PageImageState extends State<_PageImage> {
     super.dispose();
   }
 
+  Widget _image(int page) => CachedNetworkImage(
+        imageUrl: pageImageUrl(page),
+        cacheManager: mushafCache,
+        fit: BoxFit.contain,
+        width: double.infinity,
+        height: double.infinity,
+        placeholder: (_, __) => Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(color: kGreen),
+            const SizedBox(height: 12),
+            Text('جارِ تحميل صفحة ${ar(page)}...'),
+          ],
+        ),
+        errorWidget: (_, __, ___) => const Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.wifi_off, size: 48, color: Colors.grey),
+            SizedBox(height: 12),
+            Text(
+              'تعذّر تحميل الصفحة.\nاتصل بالإنترنت أول مرة، وبعدها تتحفظ على جهازك.',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final page = widget.page;
+    final img = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      child: _image(page),
+    );
+    // ضغطتين: تكبير / رجوع للحجم الطبيعي
+    void toggleZoom() {
+      if (_zoomed) {
+        _tc.value = Matrix4.identity();
+        _setZoom(false);
+      } else {
+        final size = context.size ?? Size.zero;
+        _tc.value = Matrix4.diagonal3Values(2, 2, 1)
+          ..setTranslationRaw(-size.width / 2, -size.height / 4, 0);
+        _setZoom(true);
+      }
+    }
+
+    if (!_zoomed) {
+      // بدون تكبير: صورة عادية علشان السحب يقلّب الصفحات
+      return GestureDetector(onDoubleTap: toggleZoom, child: img);
+    }
     return GestureDetector(
-      // ضغطتين: تكبير / رجوع للحجم الطبيعي
-      onDoubleTap: () {
-        if (_zoomed) {
-          _tc.value = Matrix4.identity();
-          _setZoom(false);
-        } else {
-          final size = context.size ?? Size.zero;
-          _tc.value = Matrix4.diagonal3Values(2, 2, 1)
-            ..setTranslationRaw(-size.width / 2, -size.height / 4, 0);
-          _setZoom(true);
-        }
-      },
+      onDoubleTap: toggleZoom,
       child: InteractiveViewer(
         transformationController: _tc,
         minScale: 1,
-        maxScale: 3,
-        // السحب داخل الصفحة فقط وهي مكبّرة، غير كده السحب يقلّب الصفحات
-        panEnabled: _zoomed,
-        onInteractionEnd: (_) =>
-            _setZoom(_tc.value.getMaxScaleOnAxis() > 1.05),
-        child: SafeArea(
-          child: Center(
-            child: CachedNetworkImage(
-              imageUrl: pageImageUrl(page),
-              cacheManager: mushafCache,
-              fit: BoxFit.contain,
-              width: double.infinity,
-              height: double.infinity,
-              placeholder: (_, __) => Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(color: kGreen),
-                  const SizedBox(height: 12),
-                  Text('جارِ تحميل صفحة ${ar(page)}...'),
-                ],
-              ),
-              errorWidget: (_, __, ___) => const Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.wifi_off, size: 48, color: Colors.grey),
-                  SizedBox(height: 12),
-                  Text(
-                    'تعذّر تحميل الصفحة.\nاتصل بالإنترنت أول مرة، وبعدها تتحفظ على جهازك.',
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+        maxScale: 4,
+        onInteractionEnd: (_) {
+          if (_tc.value.getMaxScaleOnAxis() <= 1.05) {
+            _tc.value = Matrix4.identity();
+            _setZoom(false);
+          }
+        },
+        child: img,
       ),
     );
   }
