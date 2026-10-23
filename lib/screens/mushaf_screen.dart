@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 import '../app_state.dart';
@@ -260,7 +261,23 @@ class _MushafReaderState extends State<MushafReader> {
   late final PageController _ctrl;
   late int _page;
   bool _showBars = true;
+  bool _zoomed = false;
+  final FocusNode _focus = FocusNode();
   final st = AppState.instance;
+
+  void _next() {
+    if (_page < totalPages) {
+      _ctrl.nextPage(
+          duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+    }
+  }
+
+  void _prev() {
+    if (_page > 1) {
+      _ctrl.previousPage(
+          duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+    }
+  }
 
   @override
   void initState() {
@@ -285,6 +302,7 @@ class _MushafReaderState extends State<MushafReader> {
   @override
   void dispose() {
     _ctrl.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -354,19 +372,39 @@ class _MushafReaderState extends State<MushafReader> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFFDF7),
-      body: Stack(
+      body: KeyboardListener(
+        focusNode: _focus,
+        autofocus: true,
+        onKeyEvent: (e) {
+          if (e is! KeyDownEvent) return;
+          // في المصحف: الصفحة التالية على اليسار
+          if (e.logicalKey == LogicalKeyboardKey.arrowLeft) _next();
+          if (e.logicalKey == LogicalKeyboardKey.arrowRight) _prev();
+        },
+        child: Stack(
         children: [
           GestureDetector(
             onTap: () => setState(() => _showBars = !_showBars),
             child: PageView.builder(
               controller: _ctrl,
               itemCount: totalPages,
+              physics: _zoomed
+                  ? const NeverScrollableScrollPhysics()
+                  : const PageScrollPhysics(),
               onPageChanged: (i) {
-                setState(() => _page = i + 1);
+                setState(() {
+                  _page = i + 1;
+                  _zoomed = false;
+                });
                 st.setLastPage(i + 1);
                 _precache(i + 1);
               },
-              itemBuilder: (context, i) => _PageImage(page: i + 1),
+              itemBuilder: (context, i) => _PageImage(
+                page: i + 1,
+                onZoomChanged: (z) {
+                  if (z != _zoomed) setState(() => _zoomed = z);
+                },
+              ),
             ),
           ),
           // الشريط العلوي
@@ -447,6 +485,12 @@ class _MushafReaderState extends State<MushafReader> {
                         label: const Text('الفهرس',
                             style: TextStyle(color: Colors.white)),
                       ),
+                      IconButton(
+                        tooltip: 'الصفحة السابقة',
+                        onPressed: _prev,
+                        icon: const Icon(Icons.chevron_right,
+                            color: Colors.white, size: 30),
+                      ),
                       TextButton(
                         onPressed: _pickPage,
                         child: Text('صفحة ${ar(_page)}',
@@ -454,6 +498,12 @@ class _MushafReaderState extends State<MushafReader> {
                                 color: kGold,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold)),
+                      ),
+                      IconButton(
+                        tooltip: 'الصفحة التالية',
+                        onPressed: _next,
+                        icon: const Icon(Icons.chevron_left,
+                            color: Colors.white, size: 30),
                       ),
                       TextButton.icon(
                         onPressed: () {
@@ -480,45 +530,87 @@ class _MushafReaderState extends State<MushafReader> {
           ),
         ],
       ),
+      ),
     );
   }
 }
 
-class _PageImage extends StatelessWidget {
+class _PageImage extends StatefulWidget {
   final int page;
-  const _PageImage({required this.page});
+  final ValueChanged<bool> onZoomChanged;
+  const _PageImage({required this.page, required this.onZoomChanged});
+
+  @override
+  State<_PageImage> createState() => _PageImageState();
+}
+
+class _PageImageState extends State<_PageImage> {
+  final TransformationController _tc = TransformationController();
+  bool _zoomed = false;
+
+  void _setZoom(bool z) {
+    if (z == _zoomed) return;
+    setState(() => _zoomed = z);
+    widget.onZoomChanged(z);
+  }
+
+  @override
+  void dispose() {
+    _tc.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return InteractiveViewer(
-      minScale: 1,
-      maxScale: 3,
-      child: SafeArea(
-        child: Center(
-          child: CachedNetworkImage(
-            imageUrl: pageImageUrl(page),
-            cacheManager: mushafCache,
-            fit: BoxFit.contain,
-            width: double.infinity,
-            height: double.infinity,
-            placeholder: (_, __) => Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(color: kGreen),
-                const SizedBox(height: 12),
-                Text('جارِ تحميل صفحة ${ar(page)}...'),
-              ],
-            ),
-            errorWidget: (_, __, ___) => Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.wifi_off, size: 48, color: Colors.grey),
-                const SizedBox(height: 12),
-                const Text(
-                  'تعذّر تحميل الصفحة.\nاتصل بالإنترنت أول مرة، وبعدها تتحفظ على جهازك.',
-                  textAlign: TextAlign.center,
-                ),
-              ],
+    final page = widget.page;
+    return GestureDetector(
+      // ضغطتين: تكبير / رجوع للحجم الطبيعي
+      onDoubleTap: () {
+        if (_zoomed) {
+          _tc.value = Matrix4.identity();
+          _setZoom(false);
+        } else {
+          final size = context.size ?? Size.zero;
+          _tc.value = Matrix4.diagonal3Values(2, 2, 1)
+            ..setTranslationRaw(-size.width / 2, -size.height / 4, 0);
+          _setZoom(true);
+        }
+      },
+      child: InteractiveViewer(
+        transformationController: _tc,
+        minScale: 1,
+        maxScale: 3,
+        // السحب داخل الصفحة فقط وهي مكبّرة، غير كده السحب يقلّب الصفحات
+        panEnabled: _zoomed,
+        onInteractionEnd: (_) =>
+            _setZoom(_tc.value.getMaxScaleOnAxis() > 1.05),
+        child: SafeArea(
+          child: Center(
+            child: CachedNetworkImage(
+              imageUrl: pageImageUrl(page),
+              cacheManager: mushafCache,
+              fit: BoxFit.contain,
+              width: double.infinity,
+              height: double.infinity,
+              placeholder: (_, __) => Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(color: kGreen),
+                  const SizedBox(height: 12),
+                  Text('جارِ تحميل صفحة ${ar(page)}...'),
+                ],
+              ),
+              errorWidget: (_, __, ___) => const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.wifi_off, size: 48, color: Colors.grey),
+                  SizedBox(height: 12),
+                  Text(
+                    'تعذّر تحميل الصفحة.\nاتصل بالإنترنت أول مرة، وبعدها تتحفظ على جهازك.',
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
