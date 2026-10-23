@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_compass/flutter_compass.dart';
@@ -28,7 +29,12 @@ class _QiblaScreenState extends State<QiblaScreen> {
   @override
   void initState() {
     super.initState();
-    final events = FlutterCompass.events;
+    Stream<CompassEvent>? events;
+    try {
+      events = kIsWeb ? null : FlutterCompass.events;
+    } catch (_) {
+      events = null;
+    }
     if (events == null) {
       _noSensor = true;
     } else {

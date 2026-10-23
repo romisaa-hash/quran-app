@@ -1,5 +1,4 @@
-import 'dart:io' show Platform;
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
@@ -12,8 +11,13 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   static bool _ready = false;
 
+  static bool get _isAndroid =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  static bool get _isIOS =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
   static Future<void> init() async {
-    if (_ready) return;
+    if (_ready || kIsWeb) return;
     tzdata.initializeTimeZones();
     const settings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
@@ -28,12 +32,13 @@ class NotificationService {
   }
 
   static Future<void> requestPermissions() async {
+    if (kIsWeb) return;
     await init();
-    if (Platform.isAndroid) {
+    if (_isAndroid) {
       final android = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
       await android?.requestNotificationsPermission();
-    } else if (Platform.isIOS) {
+    } else if (_isIOS) {
       final ios = _plugin.resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin>();
       await ios?.requestPermissions(alert: true, badge: true, sound: true);
@@ -42,14 +47,14 @@ class NotificationService {
 
   /// طلب إذن التنبيه في الوقت المضبوط (أندرويد 12+)
   static Future<void> requestExactAlarms() async {
-    if (!Platform.isAndroid) return;
+    if (!_isAndroid) return;
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     await android?.requestExactAlarmsPermission();
   }
 
   static Future<bool> _canExact() async {
-    if (!Platform.isAndroid) return true;
+    if (!_isAndroid) return true;
     try {
       final android = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
@@ -84,6 +89,7 @@ class NotificationService {
 
   /// جدولة تنبيهات الأيام القادمة
   static Future<void> scheduleAll() async {
+    if (kIsWeb) return;
     try {
       await init();
       await _plugin.cancelAll();
@@ -161,6 +167,7 @@ class NotificationService {
   }
 
   static Future<void> testNow() async {
+    if (kIsWeb) return;
     await init();
     await _plugin.show(
       id: 9999,

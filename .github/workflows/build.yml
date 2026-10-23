@@ -133,3 +133,45 @@ jobs:
         with:
           name: rafiq-almuslim-ios-unsigned
           path: rafiq-almuslim-unsigned.ipa
+
+  web:
+    name: Web preview
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate web folder
+        run: |
+          flutter create --org com.rafiqalmuslim --project-name quran_app --platforms web .
+          rm -rf test
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Build web
+        run: |
+          set -o pipefail
+          flutter build web --release --base-href /quran-app/ 2>&1 | tee web-build.log
+
+      - name: Save logs
+        if: always()
+        run: |
+          mkdir -p /tmp/wl && cp web-build.log /tmp/wl/ 2>/dev/null || true
+          cd /tmp/wl && git init -q -b ci-logs-web && git add -A && \
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "web logs" && \
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" ci-logs-web || true
+
+      - name: Publish to GitHub Pages (gh-pages branch)
+        run: |
+          cd build/web
+          touch .nojekyll
+          cp index.html 404.html
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "web ${{ github.run_number }}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" gh-pages
