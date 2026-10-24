@@ -1,0 +1,5 @@
+Analyzing quran-app...                                          
+
+warning • The URI 'package:flutter_lints/flutter.yaml' included in '/home/runner/work/quran-app/quran-app/analysis_options.yaml' can't be found when analyzing '/home/runner/work/quran-app/quran-app' • analysis_options.yaml:10:10 • include_file_not_found
+
+1 issue found. (ran in 15.1s)
