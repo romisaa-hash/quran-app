@@ -10,6 +10,7 @@ import '../app_state.dart';
 import '../services/location_service.dart';
 import '../services/prayer_calc.dart';
 import '../utils.dart';
+import '../widgets/key_scroll.dart';
 
 class QiblaScreen extends StatefulWidget {
   const QiblaScreen({super.key});
@@ -82,7 +83,10 @@ class _QiblaScreenState extends State<QiblaScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('اتجاه القبلة')),
-      body: ListView(
+      body: KeyScroll(
+          tab: 4,
+          builder: (context, sc) => ListView(
+          controller: sc,
         padding: const EdgeInsets.all(20),
         children: [
           Row(
@@ -172,7 +176,7 @@ class _QiblaScreenState extends State<QiblaScreen> {
             style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
           ),
         ],
-      ),
+      )),
     );
   }
 

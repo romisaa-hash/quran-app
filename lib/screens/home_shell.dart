@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/audio_service.dart';
 import '../utils.dart';
+import '../widgets/key_scroll.dart';
 import 'azkar_screen.dart';
 import 'listen_screen.dart';
 import 'mushaf_screen.dart';
@@ -36,7 +37,10 @@ class _HomeShellState extends State<HomeShell> {
           const MiniPlayer(),
           NavigationBar(
             selectedIndex: _index,
-            onDestinationSelected: (i) => setState(() => _index = i),
+            onDestinationSelected: (i) {
+              currentTab.value = i;
+              setState(() => _index = i);
+            },
             backgroundColor: Colors.white,
             indicatorColor: kGold.withValues(alpha: 0.3),
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,

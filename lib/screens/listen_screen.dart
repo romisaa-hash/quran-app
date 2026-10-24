@@ -4,6 +4,7 @@ import '../app_state.dart';
 import '../data/surahs.dart';
 import '../services/audio_service.dart';
 import '../utils.dart';
+import '../widgets/key_scroll.dart';
 
 class ListenScreen extends StatefulWidget {
   const ListenScreen({super.key});
@@ -90,7 +91,10 @@ class _ListenScreenState extends State<ListenScreen> {
                       )
                     : ListenableBuilder(
                         listenable: st,
-                        builder: (context, _) => ListView.builder(
+                        builder: (context, _) => KeyScroll(
+          tab: 2,
+          builder: (context, sc) => ListView.builder(
+          controller: sc,
                           itemCount: filtered.length,
                           itemBuilder: (context, i) {
                             final r = filtered[i];
@@ -119,7 +123,7 @@ class _ListenScreenState extends State<ListenScreen> {
                               ),
                             );
                           },
-                        ),
+                        )),
                       ),
           ),
         ],
@@ -248,7 +252,10 @@ class ReciterSurahsScreen extends StatelessWidget {
       appBar: AppBar(title: Text(reciter.name)),
       body: ListenableBuilder(
         listenable: audio,
-        builder: (context, _) => ListView.builder(
+        builder: (context, _) => KeyScroll(
+          tab: null,
+          builder: (context, sc) => ListView.builder(
+          controller: sc,
           itemCount: 114,
           itemBuilder: (context, i) {
             final n = i + 1;
@@ -276,7 +283,7 @@ class ReciterSurahsScreen extends StatelessWidget {
                   : null,
             );
           },
-        ),
+        )),
       ),
     );
   }

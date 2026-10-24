@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../app_state.dart';
 import '../data/azkar.dart';
 import '../utils.dart';
+import '../widgets/key_scroll.dart';
 
 class AzkarScreen extends StatelessWidget {
   const AzkarScreen({super.key});
@@ -13,7 +14,10 @@ class AzkarScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('الأذكار')),
-      body: ListView.builder(
+      body: KeyScroll(
+          tab: 3,
+          builder: (context, sc) => ListView.builder(
+          controller: sc,
         padding: const EdgeInsets.all(16),
         itemCount: azkarCategories.length,
         itemBuilder: (context, i) {
@@ -40,7 +44,7 @@ class AzkarScreen extends StatelessWidget {
             ),
           );
         },
-      ),
+      )),
     );
   }
 }
@@ -130,7 +134,10 @@ class _AzkarListScreenState extends State<AzkarListScreen> {
           ),
         ),
       ),
-      body: ListView.builder(
+      body: KeyScroll(
+          tab: null,
+          builder: (context, sc) => ListView.builder(
+          controller: sc,
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
         itemCount: widget.category.items.length,
         itemBuilder: (context, i) {
@@ -205,7 +212,7 @@ class _AzkarListScreenState extends State<AzkarListScreen> {
             ),
           );
         },
-      ),
+      )),
     );
   }
 }

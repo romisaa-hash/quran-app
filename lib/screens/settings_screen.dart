@@ -5,6 +5,7 @@ import '../services/location_service.dart';
 import '../services/notification_service.dart';
 import '../services/prayer_calc.dart';
 import '../utils.dart';
+import '../widgets/key_scroll.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -49,7 +50,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('الإعدادات')),
-      body: ListView(
+      body: KeyScroll(
+          tab: null,
+          builder: (context, sc) => ListView(
+          controller: sc,
         children: [
           _header('الموقع'),
           ListTile(
@@ -161,7 +165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 24),
         ],
-      ),
+      )),
     );
   }
 }

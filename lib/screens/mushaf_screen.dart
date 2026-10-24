@@ -7,6 +7,7 @@ import '../app_state.dart';
 import '../data/surahs.dart';
 import '../services/audio_service.dart';
 import '../utils.dart';
+import '../widgets/key_scroll.dart';
 
 /// ذاكرة تخزين صفحات المصحف (تبقى على الجهاز)
 final CacheManager mushafCache = CacheManager(
@@ -159,7 +160,10 @@ class _MushafHomeState extends State<MushafHome> {
   }
 
   Widget _surahList() {
-    return ListView.separated(
+    return KeyScroll(
+          tab: 1,
+          builder: (context, sc) => ListView.separated(
+          controller: sc,
       itemCount: 114,
       separatorBuilder: (_, __) => const Divider(height: 1, indent: 70),
       itemBuilder: (context, i) {
@@ -175,11 +179,14 @@ class _MushafHomeState extends State<MushafHome> {
           onTap: () => _open(surahStartPages[i]),
         );
       },
-    );
+    ));
   }
 
   Widget _juzList() {
-    return ListView.separated(
+    return KeyScroll(
+          tab: 1,
+          builder: (context, sc) => ListView.separated(
+          controller: sc,
       itemCount: 30,
       separatorBuilder: (_, __) => const Divider(height: 1, indent: 70),
       itemBuilder: (context, i) {
@@ -194,7 +201,7 @@ class _MushafHomeState extends State<MushafHome> {
           onTap: () => _open(page),
         );
       },
-    );
+    ));
   }
 
   Widget _bookmarks() {
@@ -261,7 +268,27 @@ class _MushafReaderState extends State<MushafReader> {
   late final PageController _ctrl;
   late int _page;
   bool _zoomed = false;
-  final FocusNode _focus = FocusNode();
+
+  /// أسهم الكيبورد تقلّب الصفحات دائمًا (حتى بعد الضغط بالماوس)
+  bool _onKey(KeyEvent e) {
+    if (e is! KeyDownEvent && e is! KeyRepeatEvent) return false;
+    if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? true)) return false;
+    final k = e.logicalKey;
+    // في المصحف: الصفحة التالية على اليسار
+    if (k == LogicalKeyboardKey.arrowLeft ||
+        k == LogicalKeyboardKey.arrowDown ||
+        k == LogicalKeyboardKey.pageDown) {
+      _next();
+      return true;
+    }
+    if (k == LogicalKeyboardKey.arrowRight ||
+        k == LogicalKeyboardKey.arrowUp ||
+        k == LogicalKeyboardKey.pageUp) {
+      _prev();
+      return true;
+    }
+    return false;
+  }
   final st = AppState.instance;
 
   void _next() {
@@ -284,6 +311,7 @@ class _MushafReaderState extends State<MushafReader> {
     _page = widget.initialPage.clamp(1, totalPages);
     _ctrl = PageController(initialPage: _page - 1);
     st.setLastPage(_page);
+    HardwareKeyboard.instance.addHandler(_onKey);
     WidgetsBinding.instance.addPostFrameCallback((_) => _precache(_page));
   }
 
@@ -300,8 +328,8 @@ class _MushafReaderState extends State<MushafReader> {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
     _ctrl.dispose();
-    _focus.dispose();
     super.dispose();
   }
 
@@ -371,16 +399,7 @@ class _MushafReaderState extends State<MushafReader> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFFDF7),
-      body: KeyboardListener(
-        focusNode: _focus,
-        autofocus: true,
-        onKeyEvent: (e) {
-          if (e is! KeyDownEvent) return;
-          // في المصحف: الصفحة التالية على اليسار
-          if (e.logicalKey == LogicalKeyboardKey.arrowLeft) _next();
-          if (e.logicalKey == LogicalKeyboardKey.arrowRight) _prev();
-        },
-        child: Column(
+      body: Column(
         children: [
           // الشريط العلوي
           Material(
@@ -515,7 +534,6 @@ class _MushafReaderState extends State<MushafReader> {
               ),
             ),
         ],
-      ),
       ),
     );
   }

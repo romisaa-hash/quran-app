@@ -8,6 +8,7 @@ import '../services/location_service.dart';
 import '../services/notification_service.dart';
 import '../services/prayer_calc.dart';
 import '../utils.dart';
+import '../widgets/key_scroll.dart';
 import 'settings_screen.dart';
 
 class PrayerScreen extends StatefulWidget {
@@ -122,7 +123,10 @@ class _PrayerScreenState extends State<PrayerScreen>
           ),
         ],
       ),
-      body: ListView(
+      body: KeyScroll(
+          tab: 0,
+          builder: (context, sc) => ListView(
+          controller: sc,
         padding: const EdgeInsets.all(16),
         children: [
           Container(
@@ -264,7 +268,7 @@ class _PrayerScreenState extends State<PrayerScreen>
             style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
           ),
         ],
-      ),
+      )),
     );
   }
 
